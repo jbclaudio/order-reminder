@@ -2,7 +2,9 @@
 
 namespace Rapidez\OrderReminder;
 
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use Rapidez\OrderReminder\Http\ViewComposers\ConfigComposer;
 
 class OrderReminderServiceProvider extends ServiceProvider
 {
@@ -15,15 +17,24 @@ class OrderReminderServiceProvider extends ServiceProvider
     {
         $this
             ->bootRoutes()
+            ->bootTranslations()
             ->bootViews()
-            ->bootPublishables()
-            ->bootFilters();
+            ->bootMigrations()
+            ->bootComposers()
+            ->bootPublishables();
     }
 
     public function bootRoutes() : self
     {
         $this->loadRoutesFrom(__DIR__.'/../routes/api.php');
         $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
+
+        return $this;
+    }
+
+    protected function bootTranslations(): static
+    {
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'rapidez-order-reminder');
 
         return $this;
     }
@@ -35,30 +46,30 @@ class OrderReminderServiceProvider extends ServiceProvider
         return $this;
     }
 
-    public function bootPublishables() : self
+    public function bootMigrations(): static
     {
-        $this->publishes([
-            __DIR__.'/../resources/views' => resource_path('views/vendor/rapidez-order-reminder'),
-        ], 'rapidez-order-reminder-views');
-
-        $this->publishes([
-            __DIR__.'/../config/rapidez-order-reminder.php' => config_path('rapidez-order-reminder.php'),
-        ], 'rapidez-order-reminder-config');
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
 
         return $this;
     }
 
-    public function bootFilters() : self
+    protected function bootComposers(): static
     {
-        Eventy::addFilter('index.product.data', function ($data) {
-            // Manipulate the data
-            return $data;
-        });
+        View::composer('rapidez::layouts.app', ConfigComposer::class);
 
-        Eventy::addFilter('index.product.mapping', fn ($mapping) => array_merge_recursive($mapping ?: [], [
-            'properties' => [
-                // Additional mappings
-            ],
-        ]));
+        return $this;
+    }
+
+    public function bootPublishables() : self
+    {
+        $this->publishes([
+            __DIR__ . '/../resources/views' => resource_path('views/vendor/rapidez-order-reminder'),
+        ],'views');
+
+        $this->publishes([
+            __DIR__ . '/../config/rapidez-order-reminder.php' => config_path('rapidez-order-reminder.php'),
+        ], 'config');
+
+        return $this;
     }
 }
